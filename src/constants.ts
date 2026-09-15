@@ -2,7 +2,7 @@ export const OFFICIAL_URL = 'https://kmgg5694.github.io/'
 export const OFFICIAL_HOST = 'kmgg5694.github.io'
 export const INSTAGRAM_URL = 'https://www.instagram.com/gimmangi246/'
 export const INSTAGRAM_HANDLE = '@gimmangi246'
-export const AUDIO_SRC = './audio/kmgg_full_introduction_50s.m4a'
+export const AUDIO_SRC = `${import.meta.env.BASE_URL}audio/kmgg_full_introduction_50s.m4a`
 
 export const CORE_PRINCIPLE =
   '이름에는 음령오행(한글) 2개와 자원오행(한문) 2개, 총 4개의 기운이 있습니다. 이 중 최소 3개 이상이 서로 상생해야 복을 받습니다.'
