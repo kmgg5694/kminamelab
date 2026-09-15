@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ivory: #f8f4ec;
+  --color-paper: #fffdf9;
+  --color-crimson: #8c2d19;
+  --color-crimson-dark: #6e2313;
+  --color-gold: #e5c79f;
+  --color-ink: #2c241b;
+  --color-ink-soft: #5c4f42;
+  --color-line: #e8dfd0;
+  --font-serif: 'Noto Serif KR', 'Batang', serif;
+  --font-sans: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --shadow-card: 0 8px 24px rgba(44, 36, 27, 0.08);
+  --shadow-soft: 0 4px 14px rgba(140, 45, 25, 0.08);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background:
+      radial-gradient(ellipse 120% 80% at 50% -10%, rgba(229, 199, 159, 0.35), transparent 55%),
+      linear-gradient(180deg, #f8f4ec 0%, #fffdf9 45%, #f3ebe0 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-crimson);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-crimson px-4 py-3 text-sm font-semibold text-paper shadow-[var(--shadow-soft)] transition duration-200 hover:bg-crimson-dark active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-gold/80 bg-paper/80 px-4 py-2.5 text-sm font-medium text-crimson transition duration-200 hover:bg-gold/30 active:scale-[0.98];
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-paper/90 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm;
+  }
+
+  .section-title {
+    @apply font-serif text-xl font-semibold tracking-tight text-ink sm:text-2xl;
+  }
+
+  .safe-pb {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
