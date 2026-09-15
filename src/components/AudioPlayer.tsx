@@ -19,10 +19,11 @@ function resolveAudioUrl() {
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
-  const [muted, setMuted] = useState(false)
+  const [muted, setMuted] = useState(true)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
   const [statusMsg, setStatusMsg] = useState('')
+  const [needsTap, setNeedsTap] = useState(false)
   const [audioUrl] = useState(resolveAudioUrl)
 
   useEffect(() => {
@@ -32,7 +33,10 @@ export default function AudioPlayer() {
     const onTime = () => setCurrent(audio.currentTime)
     const onMeta = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
     const onEnded = () => setPlaying(false)
-    const onPlay = () => setPlaying(true)
+    const onPlay = () => {
+      setPlaying(true)
+      setNeedsTap(false)
+    }
     const onPause = () => setPlaying(false)
     const onError = () =>
       setStatusMsg('소개 음성을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.')
@@ -45,9 +49,22 @@ export default function AudioPlayer() {
     audio.addEventListener('pause', onPause)
     audio.addEventListener('error', onError)
 
+    audio.muted = true
     audio.load()
 
+    const tryAutoplay = async () => {
+      try {
+        await audio.play()
+        setStatusMsg('음소거로 자동 재생 중입니다. 소리를 켜 주세요.')
+      } catch {
+        setNeedsTap(true)
+        setStatusMsg('재생을 눌러 소개영상을 들어 주세요.')
+      }
+    }
+    void tryAutoplay()
+
     return () => {
+      audio.pause()
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('loadedmetadata', onMeta)
       audio.removeEventListener('durationchange', onMeta)
@@ -66,10 +83,26 @@ export default function AudioPlayer() {
         await audio.play()
         setStatusMsg('')
       } catch {
-        setStatusMsg('재생을 시작할 수 없습니다. 재생 버튼을 다시 눌러 주세요.')
+        setNeedsTap(true)
+        setStatusMsg('재생을 시작할 수 없습니다. 다시 눌러 주세요.')
       }
     } else {
       audio.pause()
+    }
+  }, [])
+
+  const startWithSound = useCallback(async () => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.muted = false
+    setMuted(false)
+    try {
+      if (audio.paused) await audio.play()
+      setNeedsTap(false)
+      setStatusMsg('')
+    } catch {
+      setNeedsTap(true)
+      setStatusMsg('재생을 시작할 수 없습니다. 다시 눌러 주세요.')
     }
   }, [])
 
@@ -78,6 +111,7 @@ export default function AudioPlayer() {
     if (!audio) return
     audio.currentTime = 0
     void audio.play().catch(() => {
+      setNeedsTap(true)
       setStatusMsg('처음부터 재생에 실패했습니다.')
     })
   }, [])
@@ -87,6 +121,7 @@ export default function AudioPlayer() {
     if (!audio) return
     audio.muted = !audio.muted
     setMuted(audio.muted)
+    if (!audio.muted) setStatusMsg('')
   }, [])
 
   const onSeek = (value: number) => {
@@ -123,26 +158,59 @@ export default function AudioPlayer() {
   const progress = duration > 0 ? (current / duration) * 100 : 0
 
   return (
-    <section className="card" aria-labelledby="audio-title">
-      <h2 id="audio-title" className="section-title">
-        소개영상 전체 듣기
-      </h2>
-      <p className="mt-2 text-sm text-ink-soft">
-        50초 전체 소개 음성 · 케이 엠 지 지 오 육 구 사, 깃허브 점 아이오
-      </p>
+    <section className="card overflow-hidden p-0" aria-labelledby="audio-title">
+      <div className="relative min-h-[220px] bg-gradient-to-br from-crimson via-[#6e2313] to-[#3d160c] px-5 py-8 text-paper sm:min-h-[260px]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, rgba(229,199,159,0.45), transparent 45%), radial-gradient(circle at 80% 70%, rgba(255,253,249,0.18), transparent 40%)',
+          }}
+          aria-hidden="true"
+        />
 
-      <audio
-        ref={audioRef}
-        src={audioUrl}
-        preload="metadata"
-        playsInline
-        className="mt-4 w-full"
-        controls
-      >
+        <p className="relative text-xs font-semibold tracking-wide text-gold">첫 화면 소개</p>
+        <h2 id="audio-title" className="relative mt-2 font-serif text-2xl font-bold sm:text-3xl">
+          소개영상 전체 듣기
+        </h2>
+        <p className="relative mt-2 max-w-md text-sm text-paper/85">
+          50초 전체 소개 음성 · 케이 엠 지 지 오 육 구 사, 깃허브 점 아이오
+        </p>
+
+        <div className="relative mt-6 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => void (muted || needsTap ? startWithSound() : togglePlay())}
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gold text-2xl text-crimson shadow-lg transition duration-200 hover:scale-105 active:scale-95"
+            aria-label={playing ? '일시정지' : '소개영상 재생'}
+          >
+            {playing && !muted ? '❚❚' : '▶'}
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="font-serif text-lg font-semibold">김만기 주역 성명학</p>
+            <p className="text-sm text-paper/80">
+              {playing ? (muted ? '음소거 재생 중' : '재생 중') : '대기 중'} · {formatTime(current)} /{' '}
+              {formatTime(duration)}
+            </p>
+          </div>
+        </div>
+
+        {(needsTap || muted) && (
+          <button
+            type="button"
+            onClick={() => void startWithSound()}
+            className="relative mt-5 w-full rounded-xl bg-gold px-4 py-3 text-sm font-bold text-crimson transition duration-200 active:scale-[0.98]"
+          >
+            {needsTap ? '탭하여 소개영상 시작' : '소리 켜고 듣기'}
+          </button>
+        )}
+      </div>
+
+      <audio ref={audioRef} src={audioUrl} preload="auto" playsInline className="hidden">
         <track kind="captions" />
       </audio>
 
-      <div className="mt-5 space-y-4">
+      <div className="space-y-4 p-5">
         <div className="flex items-center gap-2 text-xs text-ink-soft">
           <span className="tabular-nums">{formatTime(current)}</span>
           <input

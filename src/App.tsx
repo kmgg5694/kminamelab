@@ -13,8 +13,8 @@ export default function App() {
     <div className="mx-auto min-h-dvh w-full max-w-[480px] pb-28 sm:max-w-3xl lg:max-w-5xl">
       <Header />
       <main className="space-y-8 px-4 pt-20 sm:px-6 lg:px-8">
-        <Hero />
         <AudioPlayer />
+        <Hero />
         <MockExperience />
         <KeyPoints />
         <ThreeSteps />
