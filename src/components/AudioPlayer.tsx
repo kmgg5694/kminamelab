@@ -31,7 +31,11 @@ export default function AudioPlayer() {
     if (!audio) return
 
     const onTime = () => setCurrent(audio.currentTime)
-    const onMeta = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
+    const onMeta = () => {
+      const d = audio.duration
+      if (Number.isFinite(d) && d > 0) setDuration(d)
+      else setDuration(50)
+    }
     const onEnded = () => setPlaying(false)
     const onPlay = () => {
       setPlaying(true)
