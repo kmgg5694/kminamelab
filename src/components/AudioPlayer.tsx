@@ -8,41 +8,55 @@ function formatTime(sec: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+function resolveAudioUrl() {
+  try {
+    return new URL(AUDIO_SRC, window.location.href).href
+  } catch {
+    return AUDIO_SRC
+  }
+}
+
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [shareMsg, setShareMsg] = useState('')
+  const [statusMsg, setStatusMsg] = useState('')
+  const [audioUrl] = useState(resolveAudioUrl)
 
   useEffect(() => {
-    const audio = new Audio(AUDIO_SRC)
-    audio.preload = 'metadata'
-    audioRef.current = audio
+    const audio = audioRef.current
+    if (!audio) return
 
     const onTime = () => setCurrent(audio.currentTime)
-    const onMeta = () => setDuration(audio.duration || 0)
+    const onMeta = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
     const onEnded = () => setPlaying(false)
     const onPlay = () => setPlaying(true)
     const onPause = () => setPlaying(false)
+    const onError = () =>
+      setStatusMsg('소개 음성을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.')
 
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onMeta)
+    audio.addEventListener('durationchange', onMeta)
     audio.addEventListener('ended', onEnded)
     audio.addEventListener('play', onPlay)
     audio.addEventListener('pause', onPause)
+    audio.addEventListener('error', onError)
+
+    audio.load()
 
     return () => {
-      audio.pause()
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('loadedmetadata', onMeta)
+      audio.removeEventListener('durationchange', onMeta)
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('play', onPlay)
       audio.removeEventListener('pause', onPause)
-      audioRef.current = null
+      audio.removeEventListener('error', onError)
     }
-  }, [])
+  }, [audioUrl])
 
   const togglePlay = useCallback(async () => {
     const audio = audioRef.current
@@ -50,8 +64,9 @@ export default function AudioPlayer() {
     if (audio.paused) {
       try {
         await audio.play()
+        setStatusMsg('')
       } catch {
-        setShareMsg('재생을 시작할 수 없습니다. 오디오 파일을 확인해 주세요.')
+        setStatusMsg('재생을 시작할 수 없습니다. 재생 버튼을 다시 눌러 주세요.')
       }
     } else {
       audio.pause()
@@ -62,7 +77,9 @@ export default function AudioPlayer() {
     const audio = audioRef.current
     if (!audio) return
     audio.currentTime = 0
-    void audio.play()
+    void audio.play().catch(() => {
+      setStatusMsg('처음부터 재생에 실패했습니다.')
+    })
   }, [])
 
   const toggleMute = useCallback(() => {
@@ -88,17 +105,17 @@ export default function AudioPlayer() {
     try {
       if (typeof navigator.share === 'function') {
         await navigator.share(payload)
-        setShareMsg('공유했습니다.')
+        setStatusMsg('공유했습니다.')
         return
       }
       await navigator.clipboard.writeText(`${payload.text}\n${payload.url}`)
-      setShareMsg('링크를 복사했습니다.')
+      setStatusMsg('링크를 복사했습니다.')
     } catch {
       try {
         await navigator.clipboard.writeText(OFFICIAL_URL)
-        setShareMsg('링크를 복사했습니다.')
+        setStatusMsg('링크를 복사했습니다.')
       } catch {
-        setShareMsg('공유에 실패했습니다. 주소를 직접 복사해 주세요.')
+        setStatusMsg('공유에 실패했습니다. 주소를 직접 복사해 주세요.')
       }
     }
   }
@@ -113,6 +130,17 @@ export default function AudioPlayer() {
       <p className="mt-2 text-sm text-ink-soft">
         50초 전체 소개 음성 · 케이 엠 지 지 오 육 구 사, 깃허브 점 아이오
       </p>
+
+      <audio
+        ref={audioRef}
+        src={audioUrl}
+        preload="metadata"
+        playsInline
+        className="mt-4 w-full"
+        controls
+      >
+        <track kind="captions" />
+      </audio>
 
       <div className="mt-5 space-y-4">
         <div className="flex items-center gap-2 text-xs text-ink-soft">
@@ -148,9 +176,9 @@ export default function AudioPlayer() {
           </button>
         </div>
 
-        {shareMsg ? (
+        {statusMsg ? (
           <p className="text-center text-xs text-crimson" role="status">
-            {shareMsg}
+            {statusMsg}
           </p>
         ) : null}
       </div>
